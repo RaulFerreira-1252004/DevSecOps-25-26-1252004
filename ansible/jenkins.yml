@@ -1,0 +1,55 @@
+#
+# Temptative to install jenkins using ansible
+---
+- hosts: localhost
+  become: yes
+  tasks:
+    - name: update apt cache
+      apt: update_cache=yes
+
+    - name: install git
+      apt: name=git state=present
+
+    - name: install jdk
+      apt: name=openjdk-8-jdk-headless state=present
+
+    - name: Add Jenkins-CI Repository Key
+      apt_key: url=http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key state=present
+
+    - name: Add Jenkins-CI Repository
+      apt_repository:
+        repo='deb http://pkg.jenkins-ci.org/debian binary/'
+        state=present
+        update_cache=yes
+
+    - name: Install Jenkins-CI
+      apt: name=jenkins state=present update_cache=yes cache_valid_time=600
+      notify:
+        - Restart Jenkins
+      register: install_jenkins
+
+    - name: Bypass - jenkins.install.InstallUtil.lastExecVersion
+      copy: src=/var/lib/jenkins/jenkins.install.UpgradeWizard.state
+          dest=/var/lib/jenkins/jenkins.install.InstallUtil.lastExecVersion
+          owner=jenkins
+          group=jenkins
+          remote_src=True
+
+    - stat: path=/var/lib/jenkins/secrets/initialAdminPassword
+      register: adminpassword
+
+    - name: Bypass - initialAdminPassword
+      shell: mv /var/lib/jenkins/secrets/initialAdminPassword /vagrant
+      notify:
+        - Restart Jenkins
+      when: adminpassword.stat.exists == True
+
+
+#    - name: Add Jenkins user to docker group
+#      user: name=jenkins groups=docker
+#      notify: Restart Jenkins
+
+  handlers:
+    - name: Restart Jenkins
+      service: name=jenkins state=restarted
+      become_user: root

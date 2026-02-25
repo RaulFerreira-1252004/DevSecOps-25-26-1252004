@@ -1,0 +1,15 @@
+---
+- hosts: otherservers
+  become: yes
+  tasks:
+    - name: update apt cache
+      apt: update_cache=yes
+    - name: remove apache
+      apt: name=apache2 state=absent
+    - name: install jdk
+      apt: name=openjdk-21-jdk-headless state=present
+- hosts: host1
+  become: yes
+  tasks:
+    - name: install tomcat10
+      apt: name=tomcat10 state=present
