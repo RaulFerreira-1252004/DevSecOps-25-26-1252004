@@ -1,0 +1,50 @@
+# Multi-machine Vagrant setup for CE1 (Ansible / App / H2)
+# Base box: Ubuntu 24.04 (bento)
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-24.04"
+
+  # Minimal bootstrap required so Ansible can manage hosts (Python needed on targets)
+  config.vm.provision "shell", inline: <<-SHELL
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update --yes
+    apt-get install --yes iputils-ping python3
+  SHELL
+
+  # --- APP VM (Tomcat + WAR) ---
+  config.vm.define "app" do |app|
+    app.vm.hostname = "app"
+    app.vm.network "private_network", ip: "192.168.56.11"
+
+    # Tomcat exposed to host
+    app.vm.network "forwarded_port", guest: 8080, host: 8080
+  end
+
+  # --- H2 VM (DB + Web Console) ---
+  config.vm.define "h2" do |h2|
+    h2.vm.hostname = "h2"
+    h2.vm.network "private_network", ip: "192.168.56.12"
+
+    # H2 Web Console exposed to host
+    h2.vm.network "forwarded_port", guest: 8082, host: 8082
+  end
+
+  # --- ANSIBLE VM (runs playbooks) ---
+  config.vm.define "ansible" do |ansible|
+    ansible.vm.hostname = "ansible"
+    ansible.vm.network "private_network", ip: "192.168.56.10"
+
+    # Keep /vagrant usable, but avoid overly-open permissions
+    ansible.vm.synced_folder ".", "/vagrant", mount_options: ["dmode=775,fmode=600"]
+
+    # Install Ansible inside this VM (playbooks must be executed from here per CE1)
+    ansible.vm.provision "shell", inline: <<-SHELL
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update --yes
+      apt-get install --yes --no-install-recommends apt-utils
+      apt-get install --yes software-properties-common
+      apt-add-repository --yes ppa:ansible/ansible
+      apt-get update --yes
+      apt-get install --yes ansible
+    SHELL
+  end
+end
