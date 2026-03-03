@@ -1,0 +1,5 @@
+gradle_repo: "https://bitbucket.org/pssmatos/tut-basic-gradle.git"
+gradle_dest: "/opt/tut-basic-gradle"
+
+artifact_dir: "/vagrant/ansible/artifacts"
+war_output_path: "/vagrant/ansible/artifacts/app.war"

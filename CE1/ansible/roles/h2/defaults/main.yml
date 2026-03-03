@@ -1,0 +1,10 @@
+h2_version: "2.3.232"
+h2_install_dir: "/opt/h2"
+h2_jar_path: "/opt/h2/h2.jar"
+h2_user: "h2"
+h2_group: "h2"
+h2_db_dir: "/var/lib/h2"
+h2_tcp_port: 9092
+h2_web_port: 8082
+h2_web_allow_others: true
+h2_tcp_allow_others: true

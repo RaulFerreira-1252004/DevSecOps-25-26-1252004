@@ -1,0 +1,6 @@
+tomcat_pkg: "tomcat10"
+tomcat_service: "tomcat10"
+tomcat_webapps_dir: "/var/lib/tomcat10/webapps"
+
+war_source_path: "/vagrant/ansible/artifacts/app.war"
+war_dest_name: "app.war"

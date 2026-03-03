@@ -1,0 +1,66 @@
+- name: Install Java runtime (H2)
+  ansible.builtin.apt:
+    name: openjdk-17-jre-headless
+    state: present
+    update_cache: true
+  become: true
+
+- name: Create h2 user/group
+  ansible.builtin.group:
+    name: "{{ h2_group }}"
+    system: true
+  become: true
+
+- name: Create h2 user
+  ansible.builtin.user:
+    name: "{{ h2_user }}"
+    group: "{{ h2_group }}"
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+  become: true
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ h2_user }}"
+    group: "{{ h2_group }}"
+    mode: "0750"
+  loop:
+    - "{{ h2_db_dir }}"
+  become: true
+
+- name: Create install dir
+  ansible.builtin.file:
+    path: "{{ h2_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Download H2 jar
+  ansible.builtin.get_url:
+    url: "https://repo1.maven.org/maven2/com/h2database/h2/{{ h2_version }}/h2-{{ h2_version }}.jar"
+    dest: "{{ h2_jar_path }}"
+    mode: "0644"
+  become: true
+  notify: Restart h2
+
+- name: Install systemd unit
+  ansible.builtin.template:
+    src: h2.service.j2
+    dest: /etc/systemd/system/h2.service
+    mode: "0644"
+  become: true
+  notify:
+    - Systemd daemon-reload
+    - Restart h2
+
+- name: Enable and start H2
+  ansible.builtin.systemd:
+    name: h2
+    enabled: true
+    state: started
+  become: true

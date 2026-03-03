@@ -1,0 +1,23 @@
+- name: Install Java runtime + Tomcat
+  ansible.builtin.apt:
+    name:
+      - openjdk-17-jre-headless
+      - "{{ tomcat_pkg }}"
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure Tomcat is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ tomcat_service }}"
+    enabled: true
+    state: started
+  become: true
+
+- name: Deploy WAR to Tomcat
+  ansible.builtin.copy:
+    src: "{{ war_source_path }}"
+    dest: "{{ tomcat_webapps_dir }}/{{ war_dest_name }}"
+    mode: "0644"
+  become: true
+  notify: Restart tomcat

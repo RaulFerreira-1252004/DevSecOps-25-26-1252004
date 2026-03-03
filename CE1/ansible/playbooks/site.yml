@@ -1,0 +1,16 @@
+- name: Build the Gradle project on the ansible machine
+  hosts: control
+  connection: local
+  gather_facts: true
+  roles:
+    - build
+
+- name: Provision H2 database server
+  hosts: dbservers
+  roles:
+    - h2
+
+- name: Provision app server (Tomcat + deploy WAR)
+  hosts: appservers
+  roles:
+    - app

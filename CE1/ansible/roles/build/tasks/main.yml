@@ -1,0 +1,94 @@
+- name: Install build dependencies (Git + JDK 11)
+  ansible.builtin.apt:
+    name:
+      - git
+      - openjdk-11-jdk-headless
+      - unzip
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure artifact directory exists (shared via /vagrant)
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Clone Gradle project
+  ansible.builtin.git:
+    repo: "{{ gradle_repo }}"
+    dest: "{{ gradle_dest }}"
+    version: "HEAD"
+    update: true
+  become: true
+
+- name: Ensure Gradle wrapper is executable
+  ansible.builtin.file:
+    path: "{{ gradle_dest }}/gradlew"
+    mode: "0755"
+  become: true
+
+# --- Build (use Java 11 to avoid Gradle/Java incompatibilities) ---
+- name: Build project (assemble)
+  ansible.builtin.command: "./gradlew clean assemble --no-daemon"
+  args:
+    chdir: "{{ gradle_dest }}"
+  become: true
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+    PATH: "/usr/lib/jvm/java-11-openjdk-amd64/bin:{{ ansible_env.PATH }}"
+  register: gradle_build
+  changed_when: true
+
+# --- Debug: show whether war/jar tasks exist ---
+- name: List Gradle tasks (debug)
+  ansible.builtin.command: "./gradlew tasks --all --no-daemon"
+  args:
+    chdir: "{{ gradle_dest }}"
+  become: true
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+    PATH: "/usr/lib/jvm/java-11-openjdk-amd64/bin:{{ ansible_env.PATH }}"
+  register: gradle_tasks
+  changed_when: false
+
+- name: Show Gradle tasks (filtered)
+  ansible.builtin.debug:
+    msg: "{{ gradle_tasks.stdout_lines | select('search','(^|\\s)(war|bootWar|bootJar|jar)(\\s|$)') | list }}"
+
+# --- Find outputs ---
+- name: Find produced artifacts (WAR or JAR)
+  ansible.builtin.find:
+    paths: "{{ gradle_dest }}"
+    patterns:
+      - "*.war"
+      - "*.jar"
+    recurse: true
+    file_type: file
+  register: artifacts
+  become: true
+
+- name: Show found artifacts
+  ansible.builtin.debug:
+    msg: "{{ artifacts.files | map(attribute='path') | list }}"
+
+- name: Fail if no artifact produced
+  ansible.builtin.fail:
+    msg: "No WAR/JAR found under {{ gradle_dest }}. Inspect Gradle output above."
+  when: artifacts.matched | int == 0
+
+- name: Pick newest artifact
+  ansible.builtin.set_fact:
+    built_artifact_path: "{{ (artifacts.files | sort(attribute='mtime'))[-1].path }}"
+  become: true
+
+- name: Copy artifact into shared artifacts folder (fixed name)
+  ansible.builtin.copy:
+    src: "{{ built_artifact_path }}"
+    dest: "{{ artifact_dir }}/app{{ built_artifact_path | regex_search('\\.(war|jar)$') }}"
+    remote_src: true
+    mode: "0644"
+  become: true

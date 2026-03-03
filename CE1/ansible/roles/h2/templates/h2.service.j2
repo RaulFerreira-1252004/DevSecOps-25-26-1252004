@@ -1,0 +1,17 @@
+[Unit]
+Description=H2 Database (TCP + Web Console)
+After=network.target
+
+[Service]
+Type=simple
+User={{ h2_user }}
+Group={{ h2_group }}
+WorkingDirectory={{ h2_db_dir }}
+
+ExecStart=/usr/bin/java -cp {{ h2_jar_path }} org.h2.tools.Server -tcp -tcpPort {{ h2_tcp_port }} -tcpAllowOthers -web -webPort {{ h2_web_port }} -webAllowOthers
+
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

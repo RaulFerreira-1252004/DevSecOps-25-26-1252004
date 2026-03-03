@@ -2,6 +2,11 @@
 # Base box: Ubuntu 24.04 (bento)
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
+  config.vm.boot_timeout = 600
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 1
+    vb.memory = 1024
+  end
 
   # Minimal bootstrap required so Ansible can manage hosts (Python needed on targets)
   config.vm.provision "shell", inline: <<-SHELL
