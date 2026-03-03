@@ -1,4 +1,5 @@
-.vagrant/
+CE1/.vagrant/
+**/.vagrant/
 **/private_key
 *.pem
 id_rsa
